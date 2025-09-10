@@ -14,7 +14,7 @@ app.use(express.json());
 
 app.use('/api/transactions', transactionRoutes);
 
-const buildPath = path.join(__dirname, '../dist');
+const buildPath = path.join(__dirname, '..','client','dist');
 app.use(express.static(buildPath));
 
 app.get(/^(?!\/api).*/, (req, res) => {
