@@ -51,7 +51,7 @@ const Home = () => {
         setTimeout(() => {
             setIsModalOpen(false);
             setIsClosing(false);
-        }, 250); // matches scaleDown duration
+        }, 250); 
     };
 
     return (
