@@ -2,7 +2,10 @@
 
 A full-stack **MERN application** to track personal income and expenses, visualize spending patterns, and manage transactions securely with authentication.  
 
-**Live Demo:** [Frontend on Vercel](https://personal-finance-tracker-ashen-three.vercel.app/)  
+**Live Demo:**
+[Frontend on Vercel](https://personal-finance-tracker-ashen-three.vercel.app/)  
+
+[Backend on Vercel](https://personal-finance-tracker-865h.onrender.com)  
 
 ---
 
