@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useRef, useEffect } from 'react';
 import TransactionList from '../components/TransactionList';
 import ExpenseChart from '../components/ExpenseChart';
 import { Link } from 'react-router-dom';
+import { useLogout } from '../hooks/useLogout';
+import api from '../utils/api';
 
 const API_URL = '/api/transactions';
 
@@ -12,14 +13,27 @@ const Home = () => {
     const [filter, setFilter] = useState('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
+    const { logout } = useLogout(); 
+    const effectRan = useRef(false);
+
+    const handleLogoutClick = () => {
+        logout();
+    }
 
     useEffect(() => {
-        axios.get(API_URL)
+        if (effectRan.current) return; 
+        effectRan.current = true;
+        api.get('/transactions')
             .then(res => {
                 setTransactions(res.data);
                 setFilteredTransactions(res.data);
             })
-            .catch(error => console.error("Error fetching transactions:", error));
+            .catch(error => {
+                console.error("Error fetching transactions:", error);
+                if (error.response && error.response.status === 401) {
+                    handleLogoutClick();
+                }
+            });
     }, []);
 
     useEffect(() => {
@@ -34,7 +48,7 @@ const Home = () => {
 
     const deleteTransaction = async (id) => {
         try {
-            await axios.delete(`${API_URL}/${id}`);
+            await api.delete(`/transactions/${id}`);
             setTransactions(prev => prev.filter(t => t._id !== id));
         } catch (error) {
             console.error("Error deleting transaction:", error);
@@ -55,65 +69,51 @@ const Home = () => {
     };
 
     return (
-        <div className="max-w-6xl mx-auto px-6 py-10 rounded-2xl bg-white bg-opacity-30 backdrop-blur-md shadow-xl border border-white border-opacity-20 relative overflow-hidden">
-
-            {/* Page Title */}
-            <h1 className="text-4xl font-extrabold text-center mb-8 
-                bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
-                Personal Finance Tracker
-            </h1>
-
-            
-
-            {/* Controls */}
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-3">
-                <Link
-                    to="/add"
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-105 transform transition
-            text-white font-bold py-2 px-5 rounded-lg shadow-lg text-sm sm:text-base text-center"
-    >
-                    + Add Transaction
-                </Link>
-                <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                    <button
-                        onClick={() => setFilter('all')}
-                        className={`px-4 py-2 rounded-lg text-sm sm:text-base font-medium shadow-md transition transform hover:-translate-y-0.5 
-                            ${filter === 'all'
-                                ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-300'
-                                : 'bg-gray-200 hover:bg-gray-300'}`}
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">
+                    Personal Finance Tracker
+                </h1>
+                <div className="flex items-center gap-3">
+                    <Link
+                        to="/add"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg shadow transition-colors"
                     >
-                        All
-                    </button>
+                        + Add Transaction
+                    </Link>
                     <button
-                        onClick={() => setFilter('income')}
-                        className={`px-4 py-2 rounded-lg text-sm sm:text-base font-medium shadow-md transition transform hover:-translate-y-0.5 
-                            ${filter === 'income'
-                                ? 'bg-green-500 text-white shadow-lg ring-2 ring-green-300'
-                                : 'bg-gray-200 hover:bg-gray-300'}`}
+                        onClick={handleLogoutClick}
+                        className="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg shadow transition-colors"
                     >
-                        Income
-                    </button>
-                    <button
-                        onClick={() => setFilter('expense')}
-                        className={`px-4 py-2 rounded-lg text-sm sm:text-base font-medium shadow-md transition transform hover:-translate-y-0.5 
-                            ${filter === 'expense'
-                                ? 'bg-red-500 text-white shadow-lg ring-2 ring-red-300'
-                                : 'bg-gray-200 hover:bg-gray-300'}`}
-                    >
-                        Expenses
-                    </button>
+                        Logout
+                    </button>  
                 </div>
-
-                
             </div>
 
+            {/* Filter Controls */}
+            <div className="flex justify-center sm:justify-start mb-6">
+                <div className="bg-gray-200 p-1 rounded-lg flex space-x-1">
+                    {['all', 'income', 'expense'].map((f) => (
+                        <button
+                            key={f}
+                            onClick={() => setFilter(f)}
+                            className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors
+                                ${filter === f ? 'bg-white text-gray-800 shadow' : 'text-gray-600 hover:bg-gray-300'}`}
+                        >
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            
             {/* Transaction List */}
             <div className="overflow-hidden rounded-xl shadow-md border border-gray-200">
-                <TransactionList
-                    transactions={filteredTransactions}
-                    deleteTransaction={deleteTransaction}
-                />
-            </div>
+              <TransactionList
+                 transactions={filteredTransactions}
+                 deleteTransaction={deleteTransaction}
+             />
+           </div>
 
             {/* Expense Chart Container */}
             <div
@@ -121,9 +121,6 @@ const Home = () => {
                     transition transform hover:scale-[1.02]"
                 onClick={openModal}
             >
-                <h2 className="text-xl font-semibold text-center text-gray-700 mb-4">
-                    Expense Breakdown
-                </h2>
                 <ExpenseChart transactions={transactions} />
                 <p className="text-center text-gray-500 mt-3 text-sm italic">
                     Click chart to view in fullscreen

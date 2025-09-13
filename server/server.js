@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path'); 
+const userRoutes = require('./routes/User');
 require('dotenv').config();
 
 const transactionRoutes = require('./routes/transaction');
@@ -9,22 +9,44 @@ const transactionRoutes = require('./routes/transaction');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+const allowedOrigins = [
+  "http://localhost:5173", // vite dev server
+  process.env.FRONTEND_URL // your deployed frontend domain
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow tools like Postman
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log(req.path, req.method);
+  next();
+});
+
+app.use("/api/user", userRoutes);
 app.use('/api/transactions', transactionRoutes);
 
-const buildPath = path.join(__dirname, '../dist');
-app.use(express.static(buildPath));
-
-app.get(/^(?!\/api).*/, (req, res) => {
-  res.sendFile(path.join(buildPath, 'index.html'));
+app.get("/", (req, res) => {
+  res.send("Welcome to the Personal Finance Tracker API");
 });
 
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected...'))
-  .catch(err => console.log(err));
-
-app.listen(PORT, () => {
-    console.log(`Server is running on port: ${PORT}`);
+  .then(() => {
+    console.log('MongoDB connected...');
+    app.listen(PORT, () => {
+      console.log(`Server is running on port: ${PORT}`);
+    });
+  })
+  .catch(err => {
+  console.log(err);
+  process.exit(1);
 });
